@@ -1,0 +1,10 @@
+{
+  "name": "wheelchair-subway-guide",
+  "version": "1.0.0",
+  "description": "휠체어 지하철 편의시설 안내 사이트",
+  "main": "index.js",
+  "scripts": {},
+  "dependencies": {
+    "node-fetch": "^2.6.1"
+  }
+}
