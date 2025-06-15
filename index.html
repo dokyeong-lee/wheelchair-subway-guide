@@ -1,66 +1,84 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>휠체어 지하철 안내</title>
 </head>
 <body>
-  <h1>휠체어 지하철 안내</h1>
-  <label for="station">역 이름 입력:</label>
-  <input type="text" id="station" placeholder="예: 서울역" />
-  <button onclick="checkAccessibility()">확인</button>
-  <div id="result" style="margin-top: 1em;"></div>
+  <h1>서울 지하철 휠체어 편의시설 & 혼잡도 안내</h1>
+
+  <input type="text" id="stationName" placeholder="역 이름을 입력하세요 (예: 서울역)" />
+  <button onclick="searchStation()">확인</button>
+
+  <pre id="result"></pre>
 
   <script>
-    async function checkAccessibility() {
-      const stationInput = document.getElementById("station").value.trim();
-      const resultDiv = document.getElementById("result");
-
-      // Netlify Functions 프록시 주소 사용 (CORS 해결)
-      const url = '/.netlify/functions/proxy';
-
-      try {
-        const response = await fetch(url);
-        const data = await response.json();
-
-        const rows = data.OdblrDspsnCvntl?.row;
-
-        if (!rows) {
-          throw new Error("API 데이터 구조가 예상과 다릅니다.");
-        }
-
-        const match = rows.find(item =>
-          item.SBWY_STNS_NM.includes(stationInput)
-        );
-
-        let message = '';
-        if (match) {
-          const elevatorCount = parseInt(match.ELVT, 10);
-          const liftCount = parseInt(match.WHELCHR_LIFT, 10);
-
-          if (elevatorCount > 0 || liftCount > 0) {
-            message = `${match.SBWY_STNS_NM}에는 엘리베이터 ${elevatorCount}개, 휠체어 리프트 ${liftCount}개가 설치되어 있어 휠체어 이동이 가능합니다.`;
-          } else {
-            message = `${match.SBWY_STNS_NM}에는 휠체어용 편의시설이 없어 이동이 어려울 수 있습니다.`;
-          }
-        } else {
-          message = `${stationInput}역에 대한 정보를 찾을 수 없습니다.`;
-        }
-
-        resultDiv.innerText = message;
-        speak(message);
-      } catch (e) {
-        const errorMsg = "데이터를 불러오는 데 실패했습니다.";
-        resultDiv.innerText = errorMsg;
-        speak(errorMsg);
-        console.error(e);
-      }
+    function speak(text) {
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'ko-KR';
+      window.speechSynthesis.speak(utter);
     }
 
-    function speak(text) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'ko-KR';
-      window.speechSynthesis.speak(utterance);
+    function getCongestionStatus(inCount, outCount) {
+      const total = inCount + outCount;
+      if (total > 2000) return '매우 혼잡합니다';
+      if (total > 1000) return '혼잡합니다';
+      if (total > 500) return '보통입니다';
+      return '여유롭습니다';
+    }
+
+    async function searchStation() {
+      const stationInput = document.getElementById('stationName').value.trim();
+      if (!stationInput) {
+        alert("역 이름을 입력해주세요.");
+        return;
+      }
+
+      try {
+        const res = await fetch('/.netlify/functions/proxy');
+        const data = await res.json();
+
+        const facilityRows = data.facility?.OdblrDspsnCvntl?.row || [];
+        const congestionRows = data.congestion?.CardSubwayStatsNew?.row || [];
+
+        const facility = facilityRows.find(item => item.SBWY_STNS_NM.includes(stationInput));
+        const congestion = congestionRows.find(item => item.SBWY_STNS_NM.includes(stationInput));
+
+        const resultBox = document.getElementById('result');
+        let message = '';
+
+        if (facility) {
+          const elevator = parseInt(facility.ELVT);
+          const lift = parseInt(facility.WHELCHR_LIFT);
+
+          message += `역명: ${facility.SBWY_STNS_NM}\n`;
+          message += `엘리베이터: ${facility.ELVT}개, 에스컬레이터: ${facility.ESCLT}개\n`;
+          message += `휠체어리프트: ${facility.WHELCHR_LIFT}개, 수평자동보도: ${facility.HRZT_AUTO_NSCVRG}개\n`;
+
+          if (elevator > 0 || lift > 0) {
+            message += `→ 휠체어 이동이 가능합니다.\n`;
+          } else {
+            message += `→ 휠체어 이용이 어려울 수 있습니다.\n`;
+          }
+        } else {
+          message += '해당 역의 편의시설 정보를 찾을 수 없습니다.\n';
+        }
+
+        if (congestion) {
+          const ride = parseInt(congestion.GTON_TNOPE);
+          const alight = parseInt(congestion.GTOFF_TNOPE);
+          const congestionLevel = getCongestionStatus(ride, alight);
+          message += `현재 혼잡도: ${congestionLevel} (승차: ${ride}, 하차: ${alight})\n`;
+        } else {
+          message += '해당 역의 혼잡도 정보를 찾을 수 없습니다.\n';
+        }
+
+        resultBox.textContent = message;
+        speak(message);
+
+      } catch (err) {
+        alert('데이터를 불러오는 데 실패했습니다: ' + err.message);
+      }
     }
   </script>
 </body>
