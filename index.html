@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>휠체어 지하철 안내</title>
+</head>
+<body>
+  <h1>휠체어 지하철 안내</h1>
+  <label for="station">역 이름 입력:</label>
+  <input type="text" id="station" placeholder="예: 서울역" />
+  <button onclick="checkAccessibility()">확인</button>
+  <div id="result" style="margin-top: 1em;"></div>
+
+  <script>
+    async function checkAccessibility() {
+      const stationInput = document.getElementById("station").value.trim();
+      const resultDiv = document.getElementById("result");
+
+      // Netlify Functions 프록시 주소 사용 (CORS 해결)
+      const url = '/.netlify/functions/proxy';
+
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        const rows = data.OdblrDspsnCvntl?.row;
+
+        if (!rows) {
+          throw new Error("API 데이터 구조가 예상과 다릅니다.");
+        }
+
+        const match = rows.find(item =>
+          item.SBWY_STNS_NM.includes(stationInput)
+        );
+
+        let message = '';
+        if (match) {
+          const elevatorCount = parseInt(match.ELVT, 10);
+          const liftCount = parseInt(match.WHELCHR_LIFT, 10);
+
+          if (elevatorCount > 0 || liftCount > 0) {
+            message = `${match.SBWY_STNS_NM}에는 엘리베이터 ${elevatorCount}개, 휠체어 리프트 ${liftCount}개가 설치되어 있어 휠체어 이동이 가능합니다.`;
+          } else {
+            message = `${match.SBWY_STNS_NM}에는 휠체어용 편의시설이 없어 이동이 어려울 수 있습니다.`;
+          }
+        } else {
+          message = `${stationInput}역에 대한 정보를 찾을 수 없습니다.`;
+        }
+
+        resultDiv.innerText = message;
+        speak(message);
+      } catch (e) {
+        const errorMsg = "데이터를 불러오는 데 실패했습니다.";
+        resultDiv.innerText = errorMsg;
+        speak(errorMsg);
+        console.error(e);
+      }
+    }
+
+    function speak(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'ko-KR';
+      window.speechSynthesis.speak(utterance);
+    }
+  </script>
+</body>
+</html>
