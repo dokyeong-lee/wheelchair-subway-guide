@@ -3,12 +3,73 @@
 <head>
   <meta charset="UTF-8">
   <title>휠체어 지하철 안내</title>
+  <style>
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background-color: #f4f6f8;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      margin-top: 50px;
+      color: #2c3e50;
+    }
+
+    .search-box {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+    }
+
+    input[type="text"] {
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      width: 250px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #2ecc71;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #27ae60;
+    }
+
+    #result {
+      white-space: pre-wrap;
+      margin-top: 30px;
+      background-color: #ffffff;
+      border-left: 5px solid #3498db;
+      padding: 20px;
+      border-radius: 10px;
+      width: 80%;
+      max-width: 600px;
+      color: #34495e;
+      font-size: 16px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+  </style>
 </head>
 <body>
-  <h1>서울 지하철 휠체어 편의시설 & 혼잡도 안내</h1>
+  <h1>서울 지하철 휠체어 안내 서비스</h1>
 
-  <input type="text" id="stationName" placeholder="역 이름을 입력하세요 (예: 서울역)" />
-  <button onclick="searchStation()">확인</button>
+  <div class="search-box">
+    <input type="text" id="stationName" placeholder="역 이름을 입력하세요 (예: 서울역)" />
+    <button onclick="searchStation()">확인</button>
+  </div>
 
   <pre id="result"></pre>
 
@@ -51,26 +112,26 @@
           const elevator = parseInt(facility.ELVT);
           const lift = parseInt(facility.WHELCHR_LIFT);
 
-          message += `역명: ${facility.SBWY_STNS_NM}\n`;
-          message += `엘리베이터: ${facility.ELVT}개, 에스컬레이터: ${facility.ESCLT}개\n`;
-          message += `휠체어리프트: ${facility.WHELCHR_LIFT}개, 수평자동보도: ${facility.HRZT_AUTO_NSCVRG}개\n`;
+          message += `📍 역명: ${facility.SBWY_STNS_NM}\n`;
+          message += `🛗 엘리베이터: ${facility.ELVT}개, 에스컬레이터: ${facility.ESCLT}개\n`;
+          message += `♿ 휠체어리프트: ${facility.WHELCHR_LIFT}개, 수평자동보도: ${facility.HRZT_AUTO_NSCVRG}개\n`;
 
           if (elevator > 0 || lift > 0) {
-            message += `→ 휠체어 이동이 가능합니다.\n`;
+            message += `✅ 휠체어 이동이 가능합니다.\n`;
           } else {
-            message += `→ 휠체어 이용이 어려울 수 있습니다.\n`;
+            message += `⚠️ 휠체어 이용이 어려울 수 있습니다.\n`;
           }
         } else {
-          message += '해당 역의 편의시설 정보를 찾을 수 없습니다.\n';
+          message += '❌ 해당 역의 편의시설 정보를 찾을 수 없습니다.\n';
         }
 
         if (congestion) {
           const ride = parseInt(congestion.GTON_TNOPE);
           const alight = parseInt(congestion.GTOFF_TNOPE);
           const congestionLevel = getCongestionStatus(ride, alight);
-          message += `현재 혼잡도: ${congestionLevel} (승차: ${ride}, 하차: ${alight})\n`;
+          message += `🚦 현재 혼잡도: ${congestionLevel} (승차: ${ride}, 하차: ${alight})\n`;
         } else {
-          message += '해당 역의 혼잡도 정보를 찾을 수 없습니다.\n';
+          message += '❌ 해당 역의 혼잡도 정보를 찾을 수 없습니다.\n';
         }
 
         resultBox.textContent = message;
